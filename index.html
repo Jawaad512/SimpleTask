@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="Triage tasks on a 2×2 grid of effort and today." />
+    <meta name="theme-color" content="#FAF9F6" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#121211" media="(prefers-color-scheme: dark)" />
+    <title>SimpleTask</title>
+
+    <!--
+      The splash is inline, and deliberately so: it has to paint before the
+      bundle, the fonts or the session request exist. It is the app's own
+      glyph assembling itself — four squares, the same 2×2 — over a hairline
+      that fills while auth resolves. src/ui/splash.ts fades it out the moment
+      the app knows whether it has a session, so it is never a fixed delay.
+
+      The tokens are duplicated here because index.css has not loaded yet.
+      They are the only copies outside it; keep the two in step.
+    -->
+    <style>
+      #splash {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        background: #faf9f6;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        opacity: 1;
+        transition: opacity 260ms cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      #splash.is-leaving {
+        opacity: 0;
+      }
+
+      #splash .glyph {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: 1fr 1fr;
+        gap: 3px;
+        width: 34px;
+        height: 34px;
+      }
+
+      #splash .glyph i {
+        display: block;
+        border-radius: 1.5px;
+        background: #8e8c85;
+        transform: scale(0.4);
+        opacity: 0;
+        animation: splash-tile 1.4s cubic-bezier(0.34, 1.4, 0.5, 1) infinite;
+      }
+
+      /* Top-left is Ink, as in the wordmark. The four fire in reading order. */
+      #splash .glyph i:nth-child(1) {
+        background: #1a1a18;
+        animation-delay: 0ms;
+      }
+      #splash .glyph i:nth-child(2) {
+        animation-delay: 110ms;
+      }
+      #splash .glyph i:nth-child(3) {
+        animation-delay: 330ms;
+      }
+      #splash .glyph i:nth-child(4) {
+        animation-delay: 220ms;
+      }
+
+      @keyframes splash-tile {
+        0% {
+          transform: scale(0.4);
+          opacity: 0;
+        }
+        22%,
+        62% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        88%,
+        100% {
+          transform: scale(0.4);
+          opacity: 0;
+        }
+      }
+
+      #splash .name {
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        opacity: 0;
+        animation: splash-fade 600ms cubic-bezier(0.4, 0, 0.2, 1) 120ms forwards;
+      }
+
+      #splash .name span:first-child {
+        color: #0e8681;
+      }
+      #splash .name span:last-child {
+        color: #b87309;
+      }
+
+      @keyframes splash-fade {
+        to {
+          opacity: 1;
+        }
+      }
+
+      #splash .bar {
+        width: 104px;
+        height: 2px;
+        border-radius: 999px;
+        overflow: hidden;
+        background: rgba(142, 140, 133, 0.2);
+      }
+
+      #splash .bar i {
+        display: block;
+        width: 40%;
+        height: 100%;
+        border-radius: 999px;
+        background: #8e8c85;
+        animation: splash-bar 1.15s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+      }
+
+      @keyframes splash-bar {
+        0% {
+          transform: translateX(-110%);
+        }
+        100% {
+          transform: translateX(360%);
+        }
+      }
+
+      @media (prefers-color-scheme: dark) {
+        #splash {
+          background: #121211;
+        }
+        #splash .glyph i {
+          background: #77756e;
+        }
+        #splash .glyph i:nth-child(1) {
+          background: #edede8;
+        }
+        #splash .name span:first-child {
+          color: #26a29c;
+        }
+        #splash .name span:last-child {
+          color: #d48c1c;
+        }
+        #splash .bar {
+          background: rgba(119, 117, 110, 0.25);
+        }
+        #splash .bar i {
+          background: #77756e;
+        }
+      }
+
+      /* The bar still moves — an indeterminate wait with nothing moving reads
+         as a hang — but the assembling glyph settles and stays. */
+      @media (prefers-reduced-motion: reduce) {
+        #splash .glyph i {
+          animation: none;
+          transform: none;
+          opacity: 1;
+        }
+        #splash .name {
+          animation: none;
+          opacity: 1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <div id="splash" role="status" aria-label="Loading SimpleTask">
+      <span class="glyph" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      <span class="name" aria-hidden="true"><span>Simple</span><span>Task</span></span>
+      <span class="bar" aria-hidden="true"><i></i></span>
+    </div>
+
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

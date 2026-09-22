@@ -1,0 +1,906 @@
+@import 'tailwindcss';
+
+/* ---------------------------------------------------------------------------
+   Tokens. The complete light palette lives on :root; the dark block redefines
+   only the values that change. Nothing outside this file may use a raw hex.
+   --------------------------------------------------------------------------- */
+
+:root {
+  color-scheme: light dark;
+
+  /* Interface — four tokens, everything that is not a category or a deadline */
+  --canvas: #faf9f6;
+  --surface: #ffffff;
+  --ink: #1a1a18;
+  --muted: #8e8c85;
+
+  /* Category palette — fifteen fixed slots, stored as an int on the row.
+     1–10 are the original set; 11–15 fill the gaps they left on the wheel
+     (orange, olive, forest, cyan) plus one low-saturation brown. */
+  --cat-1: #b87309; /* Amber */
+  --cat-2: #5e8c10; /* Lime */
+  --cat-3: #12855a; /* Green */
+  --cat-4: #0e8681; /* Teal */
+  --cat-5: #2e6fd9; /* Blue */
+  --cat-6: #5b4bd1; /* Indigo */
+  --cat-7: #8e44c9; /* Violet */
+  --cat-8: #b92fb0; /* Fuchsia */
+  --cat-9: #c93670; /* Pink */
+  --cat-10: #5a6b7c; /* Slate */
+  --cat-11: #b4551c; /* Rust */
+  --cat-12: #7f7d14; /* Olive */
+  --cat-13: #2f7a35; /* Forest */
+  --cat-14: #0b7d99; /* Cyan */
+  --cat-15: #8a6550; /* Mocha */
+
+  /* Deadlines only. Appears nowhere else in the application. */
+  --deadline: #c8342e;
+
+  /* Task-sheet actions. Soft fills so they read as colour without shouting. */
+  --ok: var(--cat-3);
+  --danger: var(--deadline);
+  --ok-soft: color-mix(in srgb, var(--ok) 16%, var(--surface));
+  --danger-soft: color-mix(in srgb, var(--danger) 14%, var(--surface));
+
+  /* Wordmark. Aliases onto existing slots so no new colour enters the system
+     and a swap is one line. */
+  --brand-a: var(--cat-4);
+  --brand-b: var(--cat-1);
+
+  /* Derived structure */
+  --hairline: color-mix(in srgb, var(--muted) 20%, transparent);
+  --hairline-strong: color-mix(in srgb, var(--muted) 34%, transparent);
+  --axis-line: color-mix(in srgb, var(--muted) 22%, transparent);
+  --field: color-mix(in srgb, var(--muted) 7%, transparent);
+  --field-strong: color-mix(in srgb, var(--muted) 14%, transparent);
+  /* One step off Ink, so a filled control has somewhere to go on hover. */
+  --ink-hover: color-mix(in srgb, var(--ink) 84%, var(--muted));
+
+  /* Shape */
+  --r-card: 7px;
+  --r-modal: 10px;
+  --r-pill: 999px;
+
+  /* Spacing — 4px base */
+  --s-1: 4px;
+  --s-card-gap: 6px;
+  --s-quadrant: 9px;
+  --s-panel: 13px;
+  /* Height of the Under-20-min / 20-min+ labels, plus the gap under them.
+     The rail uses the sum so its top edge meets the 2×2, not the labels. */
+  --board-axis-row: 14.25px;
+  --board-axis-gap: 5px;
+
+  /* Motion */
+  --t: 140ms;
+  --t-slow: 300ms;
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  /* Overshoots slightly — the only spring in the app, used on completion. */
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.5, 1);
+
+  /* Shadow — almost none */
+  --shadow-hover: 0 1px 3px rgba(0, 0, 0, 0.07);
+  --shadow-raise: 0 3px 10px rgba(0, 0, 0, 0.09);
+  --shadow-lift: 0 10px 26px rgba(0, 0, 0, 0.16);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --canvas: #121211;
+    --surface: #1c1c1a;
+    --ink: #edede8;
+    --muted: #77756e;
+
+    --cat-1: #d48c1c;
+    --cat-2: #7ba828;
+    --cat-3: #2aa172;
+    --cat-4: #26a29c;
+    --cat-5: #5189e8;
+    --cat-6: #7a6be2;
+    --cat-7: #a863dc;
+    --cat-8: #d052c7;
+    --cat-9: #de5789;
+    --cat-10: #7a8b9c;
+    --cat-11: #d97a41;
+    --cat-12: #a8a533;
+    --cat-13: #55a35d;
+    --cat-14: #2aa6c6;
+    --cat-15: #ab8570;
+
+    --deadline: #e05a54;
+
+    --shadow-hover: 0 1px 3px rgba(0, 0, 0, 0.4);
+    --shadow-raise: 0 3px 10px rgba(0, 0, 0, 0.45);
+    --shadow-lift: 0 10px 26px rgba(0, 0, 0, 0.55);
+  }
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-deadline: var(--deadline);
+  --color-hairline: var(--hairline);
+
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --radius-card: var(--r-card);
+  --radius-modal: var(--r-modal);
+}
+
+/* ---------------------------------------------------------------------------
+   Base. Chrome resets live here. Do not use the `font` shorthand on button
+   or field — it resets size and weight, and if it ever sits outside a layer
+   it silently flattens every type class on those elements to 16px while
+   leaving text-transform and letter-spacing intact. That is the enlarged
+   GRID / CATEGORIES / UNDER 5 MIN bug.
+   --------------------------------------------------------------------------- */
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  button {
+    color: inherit;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  input,
+  select,
+  textarea {
+    color: inherit;
+  }
+
+  :focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--ink) 55%, transparent);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Type scale. Unlayered on purpose: a class must beat Tailwind's layered
+   `button { font: inherit }` reset, or every control inherits 16px.
+   These are the only text sizes in the app.
+   --------------------------------------------------------------------------- */
+
+.t-card-title {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.t-card-title-instant {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.t-row-title {
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.t-deadline-title {
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.t-days {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.t-section {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.t-axis {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  line-height: var(--board-axis-row);
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+}
+
+.t-meta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Controls. Mono, uppercase and tracked means "structural label" in this
+   app — an axis marker or a pane heading. A button is not a label, so it
+   stays sans and sentence case and sits just under the content sizes. */
+.t-control {
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.t-control-sm {
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Interactive chrome. Every one of these lives here rather than inline
+   because :hover has no inline equivalent, and an inline background outranks
+   every rule in this file whatever the layer — so a control that wants a
+   hover state must not carry its own background attribute.
+
+   The rule for the whole app: anything you can click says so under the
+   pointer, and it says so the same way — a step of fill, a step of contrast,
+   and at most one pixel of lift.
+   --------------------------------------------------------------------------- */
+
+@layer components {
+  .nav-tab {
+    border: 1px solid transparent;
+    border-radius: var(--r-pill);
+    padding: 5px 10px;
+    color: var(--muted);
+    background: transparent;
+    transition:
+      background var(--t) var(--ease),
+      color var(--t) var(--ease),
+      border-color var(--t) var(--ease);
+  }
+
+  .nav-tab:hover {
+    background: var(--field);
+    color: var(--ink);
+  }
+
+  /* Ordered after :hover on purpose — the current section keeps its own look
+     rather than reacting to the pointer. */
+  .nav-tab[aria-current='page'] {
+    background: var(--surface);
+    border-color: var(--hairline-strong);
+    color: var(--ink);
+  }
+
+  .icon-control {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border: 1px solid var(--hairline-strong);
+    border-radius: var(--r-pill);
+    color: var(--muted);
+    transition:
+      background var(--t) var(--ease),
+      color var(--t) var(--ease),
+      border-color var(--t) var(--ease),
+      transform var(--t) var(--ease);
+  }
+
+  .icon-control:hover:not(:disabled) {
+    background: var(--field);
+    color: var(--ink);
+    border-color: var(--muted);
+  }
+
+  .icon-control:active:not(:disabled) {
+    transform: scale(0.92);
+  }
+
+  /* A deadline or habit row opens its editor on click; the negative margin
+     buys a hover target without moving anything. */
+  .row-edit {
+    border-radius: var(--r-card);
+    margin: -3px -5px;
+    padding: 3px 5px;
+    text-align: left;
+    transition: background var(--t) var(--ease);
+  }
+
+  .row-edit:hover {
+    background: var(--field);
+  }
+
+  /* --- Buttons ---------------------------------------------------------- */
+
+  .btn {
+    border-radius: var(--r-pill);
+    transition:
+      background var(--t) var(--ease),
+      color var(--t) var(--ease),
+      border-color var(--t) var(--ease),
+      box-shadow var(--t) var(--ease),
+      transform var(--t) var(--ease);
+  }
+
+  .btn:active:not(:disabled) {
+    transform: translateY(0) scale(0.98);
+  }
+
+  .btn:disabled {
+    cursor: not-allowed;
+  }
+
+  .btn-primary {
+    background: var(--ink);
+    color: var(--canvas);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: var(--ink-hover);
+    box-shadow: var(--shadow-raise);
+    transform: translateY(-1px);
+  }
+
+  .btn-quiet {
+    background: transparent;
+    border: 1px solid var(--hairline-strong);
+    color: var(--muted);
+  }
+
+  .btn-quiet:hover:not(:disabled) {
+    background: var(--field);
+    border-color: var(--muted);
+    color: var(--ink);
+  }
+
+  .btn-done {
+    background: var(--ok-soft);
+    border: 1px solid color-mix(in srgb, var(--ok) 28%, transparent);
+    color: var(--ok);
+  }
+
+  .btn-done:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--ok) 24%, var(--surface));
+    border-color: color-mix(in srgb, var(--ok) 42%, transparent);
+  }
+
+  .btn-danger {
+    background: var(--danger-soft);
+    border: 1px solid color-mix(in srgb, var(--danger) 28%, transparent);
+    color: var(--danger);
+  }
+
+  .btn-danger:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--danger) 22%, var(--surface));
+    border-color: color-mix(in srgb, var(--danger) 42%, transparent);
+  }
+
+  /* An icon with no chrome of its own until you point at it. */
+  .ghost-icon {
+    display: grid;
+    place-items: center;
+    border-radius: var(--r-pill);
+    color: var(--muted);
+    transition:
+      background var(--t) var(--ease),
+      color var(--t) var(--ease),
+      transform var(--t) var(--ease);
+  }
+
+  .ghost-icon:hover:not(:disabled) {
+    background: var(--field-strong);
+    color: var(--ink);
+  }
+
+  .ghost-icon:active:not(:disabled) {
+    transform: scale(0.9);
+  }
+
+  /* Sits on a filled pill, where --field would be invisible. */
+  .ghost-icon-on:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--canvas) 22%, transparent);
+    color: var(--canvas);
+  }
+
+  /* --- Pills: tag and category filters, and the two-state toggles -------- */
+
+  .pill {
+    border-radius: var(--r-pill);
+    border: 1px solid var(--hairline-strong);
+    background: transparent;
+    color: var(--muted);
+    transition:
+      background var(--t) var(--ease),
+      color var(--t) var(--ease),
+      border-color var(--t) var(--ease);
+  }
+
+  .pill:hover {
+    background: var(--field);
+    border-color: var(--muted);
+    color: var(--ink);
+  }
+
+  .pill[data-on='true'] {
+    background: var(--ink);
+    border-color: transparent;
+    color: var(--canvas);
+  }
+
+  .pill[data-on='true']:hover {
+    background: var(--ink-hover);
+  }
+
+  /* --- Segmented control ------------------------------------------------ */
+
+  .segment {
+    background: transparent;
+    color: var(--muted);
+    transition:
+      background var(--t) var(--ease),
+      color var(--t) var(--ease),
+      box-shadow var(--t) var(--ease);
+  }
+
+  .segment:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--surface) 60%, transparent);
+    color: var(--ink);
+  }
+
+  .segment[data-on='true'] {
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: var(--shadow-hover);
+  }
+
+  .segment:disabled {
+    cursor: not-allowed;
+  }
+
+  /* --- Fields ----------------------------------------------------------- */
+
+  .field {
+    background: var(--canvas);
+    border: 1px solid var(--hairline-strong);
+    border-radius: var(--r-card);
+    outline: none;
+    transition:
+      border-color var(--t) var(--ease),
+      background var(--t) var(--ease);
+  }
+
+  .field:hover:not(:disabled) {
+    border-color: var(--muted);
+  }
+
+  .field:focus {
+    border-color: var(--ink);
+  }
+
+  /* Reads as text until you touch it, then admits it is an input. */
+  .field-bare {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--r-card);
+    outline: none;
+    transition:
+      border-color var(--t) var(--ease),
+      background var(--t) var(--ease);
+  }
+
+  .field-bare:hover {
+    background: var(--field);
+    border-color: var(--hairline);
+  }
+
+  .field-bare:focus {
+    background: var(--canvas);
+    border-color: var(--ink);
+  }
+
+  /* --- Colour swatches -------------------------------------------------- */
+
+  .swatch {
+    transition:
+      transform var(--t) var(--ease),
+      box-shadow var(--t) var(--ease),
+      opacity var(--t) var(--ease);
+  }
+
+  .swatch:hover:not(:disabled) {
+    transform: scale(1.14);
+    box-shadow: var(--shadow-hover);
+  }
+
+  .swatch:active:not(:disabled) {
+    transform: scale(1);
+  }
+
+  /* --- The habit day chips ---------------------------------------------- */
+
+  .day-chip {
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: var(--r-pill);
+    border: 1px solid var(--hairline-strong);
+    background: transparent;
+    color: var(--muted);
+    transition:
+      background var(--t) var(--ease),
+      color var(--t) var(--ease),
+      border-color var(--t) var(--ease),
+      transform var(--t) var(--ease);
+  }
+
+  .day-chip:hover {
+    background: var(--field);
+    border-color: var(--muted);
+    color: var(--ink);
+  }
+
+  .day-chip[data-on='true'] {
+    background: var(--ink);
+    border-color: transparent;
+    color: var(--canvas);
+  }
+
+  .day-chip[data-on='true']:hover {
+    background: var(--ink-hover);
+  }
+
+  .day-chip:active {
+    transform: scale(0.9);
+  }
+
+  /* The read-only version under a habit row. */
+  .day-dot {
+    display: grid;
+    place-items: center;
+    width: 13px;
+    height: 13px;
+    border-radius: var(--r-pill);
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 8px;
+    line-height: 1;
+  }
+
+  .day-dot[data-on='true'] {
+    background: color-mix(in srgb, var(--muted) 26%, transparent);
+    color: var(--ink);
+  }
+
+  /* Today's column in that strip, whether or not it is scheduled. */
+  .day-dot[data-today='true'] {
+    box-shadow: inset 0 0 0 1px var(--muted);
+  }
+
+  /* --- Toggle switch ---------------------------------------------------- */
+
+  .switch {
+    flex-shrink: 0;
+    width: 26px;
+    height: 15px;
+    border-radius: var(--r-pill);
+    border: 1px solid var(--hairline-strong);
+    background: transparent;
+    padding: 2px;
+    display: flex;
+    justify-content: flex-start;
+    transition:
+      background var(--t) var(--ease),
+      border-color var(--t) var(--ease),
+      box-shadow var(--t) var(--ease);
+  }
+
+  .switch:hover {
+    border-color: var(--muted);
+    box-shadow: var(--shadow-hover);
+  }
+
+  .switch > span {
+    width: 9px;
+    height: 9px;
+    border-radius: var(--r-pill);
+    background: var(--muted);
+    transition:
+      background var(--t) var(--ease),
+      transform var(--t) var(--ease);
+  }
+
+  .switch[aria-checked='true'] {
+    background: var(--ink);
+    border-color: transparent;
+  }
+
+  .switch[aria-checked='true']:hover {
+    background: var(--ink-hover);
+  }
+
+  .switch[aria-checked='true'] > span {
+    background: var(--canvas);
+    transform: translateX(11px);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   The under-5-minute halo. §8 — drawn from the card's own category hue, so no
+   new colour enters the system.
+   --------------------------------------------------------------------------- */
+
+@keyframes nudge {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--cat) 0%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 3.5px color-mix(in srgb, var(--cat) 20%, transparent);
+  }
+}
+
+.card.instant.now {
+  animation: nudge 3.4s ease-in-out infinite;
+}
+
+/* ---------------------------------------------------------------------------
+   Task card + tick button
+   --------------------------------------------------------------------------- */
+
+.card {
+  position: relative;
+  /* dnd-kit is pointer-event based; the browser must not claim the gesture. */
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  transition:
+    box-shadow var(--t) var(--ease),
+    border-color var(--t) var(--ease),
+    transform var(--t) var(--ease);
+}
+
+.card:hover:not(.dragging):not(.completing) {
+  box-shadow: var(--shadow-raise);
+  transform: translateY(-1px);
+}
+
+.card:active:not(.dragging):not(.completing) {
+  transform: translateY(0);
+}
+
+/*
+   Completion. Not a celebration — an acknowledgement: the card takes the tick,
+   the category colour washes across it once, and it leaves. The wash is drawn
+   from --cat, which every card already carries, so completing a task
+   introduces no colour that was not already on screen.
+*/
+
+@keyframes card-done {
+  0% {
+    transform: none;
+    opacity: 1;
+  }
+  22% {
+    transform: scale(0.972);
+    opacity: 1;
+  }
+  52% {
+    transform: scale(1.008);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.955) translateY(-3px);
+    opacity: 0;
+  }
+}
+
+@keyframes card-wash {
+  0% {
+    transform: scaleX(0);
+    opacity: 0.9;
+  }
+  60% {
+    transform: scaleX(1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scaleX(1);
+    opacity: 0;
+  }
+}
+
+/* The second selector only exists to outrank `.card.instant.now`, which is a
+   three-class selector and would otherwise keep the halo running while the
+   card is trying to leave. */
+.card.completing,
+.card.instant.now.completing {
+  pointer-events: none;
+  animation: card-done var(--t-slow) var(--ease-spring) forwards;
+}
+
+.card.completing::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  transform-origin: left center;
+  background: color-mix(in srgb, var(--cat) 20%, transparent);
+  animation: card-wash var(--t-slow) var(--ease) forwards;
+}
+
+/* A list row has no category border to wash, so it just settles and goes. */
+@keyframes row-done {
+  0% {
+    opacity: 1;
+    transform: none;
+  }
+  30% {
+    opacity: 1;
+    transform: translateX(3px);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+}
+
+.row-card {
+  transition:
+    box-shadow var(--t) var(--ease),
+    border-color var(--t) var(--ease),
+    background var(--t) var(--ease);
+}
+
+.row-card:hover:not(.completing) {
+  box-shadow: var(--shadow-raise);
+  border-color: var(--hairline-strong);
+}
+
+.row-card.completing {
+  pointer-events: none;
+  animation: row-done var(--t-slow) var(--ease) forwards;
+}
+
+/* A card that has just arrived — from quick-add, a habit, or a drop. */
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.card-enter {
+  animation: card-in 180ms var(--ease) both;
+}
+
+/* §9.3 — a ~44px target that costs no visible width. The circle stays 22px;
+   the pseudo-element does the reaching, including out to the card's edge. */
+.tick {
+  position: relative;
+  transition:
+    background var(--t) var(--ease),
+    color var(--t) var(--ease),
+    border-color var(--t) var(--ease),
+    transform var(--t) var(--ease);
+}
+
+.tick::after {
+  content: '';
+  position: absolute;
+  inset: -11px;
+  border-radius: var(--r-pill);
+}
+
+.tick:hover {
+  transform: scale(1.1);
+}
+
+.tick.ticked {
+  animation: tick-pop 260ms var(--ease-spring);
+}
+
+@keyframes tick-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Quadrants scroll independently and quietly. */
+.thin-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--hairline-strong) transparent;
+}
+
+.thin-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.thin-scroll::-webkit-scrollbar-thumb {
+  background: var(--hairline-strong);
+  border-radius: var(--r-pill);
+}
+
+.thin-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ---------------------------------------------------------------------------
+   Reduced motion. Every signal above has to survive; only the movement goes.
+   --------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .card.instant.now {
+    animation: none;
+    box-shadow: 0 0 0 2.5px color-mix(in srgb, var(--cat) 20%, transparent);
+  }
+
+  .card:hover:not(.dragging):not(.completing),
+  .card:active:not(.dragging):not(.completing),
+  .btn-primary:hover:not(:disabled),
+  .btn:active:not(:disabled),
+  .icon-control:active:not(:disabled),
+  .ghost-icon:active:not(:disabled),
+  .swatch:hover:not(:disabled),
+  .day-chip:active,
+  .tick:hover {
+    transform: none;
+  }
+
+  /* The card still has to leave, or completion looks like it failed. */
+  .card.completing,
+  .row-card.completing {
+    animation: none;
+    opacity: 0;
+  }
+
+  .card.completing::after,
+  .card-enter,
+  .tick.ticked {
+    animation: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
