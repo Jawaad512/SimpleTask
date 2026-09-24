@@ -24,9 +24,10 @@ import { InfoPage } from './features/info/InfoPage'
 import { LeadsPanel } from './features/leads/LeadsPanel'
 import { ListView } from './features/list/ListView'
 import { TaskSheet } from './features/sheet/TaskSheet'
-import { SignOutIcon } from './ui/Icons'
+import { MoonIcon, SignOutIcon, SunIcon } from './ui/Icons'
 import { useLayout } from './ui/Layout'
 import { dismissSplash } from './ui/splash'
+import { useTheme } from './ui/Theme'
 import { useToast } from './ui/Toast'
 import { Wordmark } from './ui/Wordmark'
 
@@ -82,6 +83,7 @@ function AppShell() {
     move,
     setCategory,
     setEstimate,
+    setTitle,
     setStatus,
     remove,
     restore,
@@ -166,6 +168,11 @@ function AppShell() {
       isQuick: axes.isQuick,
       position: positionAtEndOf(axes, task.id),
     })
+  }
+
+  function handleSetTitle(task: TaskRow, title: string) {
+    if (title === task.title) return
+    setTitle.mutate({ id: task.id, title })
   }
 
   function handleSetCategory(task: TaskRow, categoryId: string) {
@@ -393,7 +400,10 @@ function AppShell() {
             >
               Categories
             </button>
-            {!isGuest && <InterestCountButton onOpen={() => setLeadsOpen(true)} />}
+            {/* Desktop only: a lead count is for whoever is running the demo,
+                and a phone header has no room to spare for it. */}
+            {!isGuest && !isPhone && <InterestCountButton onOpen={() => setLeadsOpen(true)} />}
+            <ThemeToggle />
             <button
               type="button"
               className="icon-control"
@@ -499,6 +509,7 @@ function AppShell() {
           category={categories.find((row) => row.id === openTask.category_id)}
           categories={categories}
           onClose={() => setOpenTaskId(null)}
+          onSetTitle={handleSetTitle}
           onSetEstimate={handleSetEstimate}
           onSetAxes={handleSetAxes}
           onSetCategory={handleSetCategory}
@@ -507,6 +518,18 @@ function AppShell() {
         />
       )}
     </div>
+  )
+}
+
+/** The icon is where you are going, not where you are. */
+function ThemeToggle() {
+  const { theme, toggle } = useTheme()
+  const label = theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'
+
+  return (
+    <button type="button" className="icon-control" aria-label={label} title={label} onClick={toggle}>
+      {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+    </button>
   )
 }
 

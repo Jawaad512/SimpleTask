@@ -185,6 +185,23 @@ export function useTaskMutations() {
     },
   })
 
+  /** A rename, and nothing else — the title is no one else's business. */
+  const setTitle = useOptimisticList<TaskRow, { id: string; title: string }>({
+    keys: [qk.tasks],
+    errorMessage: 'Couldn’t rename that task.',
+    apply: (rows, vars) =>
+      rows.map((row) => (row.id === vars.id ? { ...row, title: vars.title } : row)),
+    mutationFn: async ({ id, title }) => {
+      const patch = { title }
+      if (isGuest) {
+        guestUpdateTask(id, patch)
+        return
+      }
+      const { error } = await supabase.from('tasks').update(patch).eq('id', id)
+      if (error) throw error
+    },
+  })
+
   const setEstimate = useOptimisticList<TaskRow, EstimateInput>({
     keys: [qk.tasks],
     errorMessage: 'Couldn’t save that estimate.',
@@ -318,6 +335,7 @@ export function useTaskMutations() {
     move,
     setCategory,
     setEstimate,
+    setTitle,
     setStatus,
     remove,
     restore,

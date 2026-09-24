@@ -101,3 +101,32 @@ export function GripIcon({ size = 10 }: IconProps) {
     </svg>
   )
 }
+
+/** Shown while the app is dark — the icon is the destination, not the state. */
+export function SunIcon({ size = 13, strokeWidth = 1.5 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 14 14" fill="none" aria-hidden>
+      <circle cx="7" cy="7" r="2.6" stroke="currentColor" strokeWidth={strokeWidth} />
+      <path
+        d="M7 1.2v1.4M7 11.4v1.4M1.2 7h1.4M11.4 7h1.4M2.9 2.9l1 1M10.1 10.1l1 1M11.1 2.9l-1 1M3.9 10.1l-1 1"
+        stroke="currentColor"
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+export function MoonIcon({ size = 13, strokeWidth = 1.5 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 14 14" fill="none" aria-hidden>
+      <path
+        d="M11.6 8.4A5 5 0 0 1 5.6 2.4a5 5 0 1 0 6 6z"
+        stroke="currentColor"
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}

@@ -25,6 +25,12 @@ export function Quadrant({ id, tasks, slotFor, onComplete, onOpen }: QuadrantPro
         padding: 'var(--s-quadrant)',
         overflowY: 'auto',
         overflowX: 'hidden',
+        // A quadrant scrolls on its own. Once it reaches its end the gesture
+        // stops there rather than carrying on into the page behind the board,
+        // which on a phone reads as the whole grid sliding away under a finger
+        // that was only trying to reach the last card.
+        overscrollBehavior: 'contain',
+        WebkitOverflowScrolling: 'touch',
         minHeight: 0,
         transition: 'background var(--t) var(--ease)',
       }}

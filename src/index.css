@@ -84,35 +84,44 @@
   --shadow-lift: 0 10px 26px rgba(0, 0, 0, 0.16);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --canvas: #121211;
-    --surface: #1c1c1a;
-    --ink: #edede8;
-    --muted: #77756e;
+/*
+   Dark. Keyed off the attribute the head script writes before the first paint,
+   not off the media query, so a chosen theme and a system theme are the same
+   code path and the toggle in the header is one attribute away.
+*/
+:root[data-theme="dark"] {
+  color-scheme: dark;
 
-    --cat-1: #d48c1c;
-    --cat-2: #7ba828;
-    --cat-3: #2aa172;
-    --cat-4: #26a29c;
-    --cat-5: #5189e8;
-    --cat-6: #7a6be2;
-    --cat-7: #a863dc;
-    --cat-8: #d052c7;
-    --cat-9: #de5789;
-    --cat-10: #7a8b9c;
-    --cat-11: #d97a41;
-    --cat-12: #a8a533;
-    --cat-13: #55a35d;
-    --cat-14: #2aa6c6;
-    --cat-15: #ab8570;
+  --canvas: #121211;
+  --surface: #1c1c1a;
+  --ink: #edede8;
+  --muted: #77756e;
 
-    --deadline: #e05a54;
+  --cat-1: #d48c1c;
+  --cat-2: #7ba828;
+  --cat-3: #2aa172;
+  --cat-4: #26a29c;
+  --cat-5: #5189e8;
+  --cat-6: #7a6be2;
+  --cat-7: #a863dc;
+  --cat-8: #d052c7;
+  --cat-9: #de5789;
+  --cat-10: #7a8b9c;
+  --cat-11: #d97a41;
+  --cat-12: #a8a533;
+  --cat-13: #55a35d;
+  --cat-14: #2aa6c6;
+  --cat-15: #ab8570;
 
-    --shadow-hover: 0 1px 3px rgba(0, 0, 0, 0.4);
-    --shadow-raise: 0 3px 10px rgba(0, 0, 0, 0.45);
-    --shadow-lift: 0 10px 26px rgba(0, 0, 0, 0.55);
-  }
+  --deadline: #e05a54;
+
+  --shadow-hover: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-raise: 0 3px 10px rgba(0, 0, 0, 0.45);
+  --shadow-lift: 0 10px 26px rgba(0, 0, 0, 0.55);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
 }
 
 @theme inline {
@@ -236,6 +245,18 @@
   font-size: 10px;
   font-weight: 400;
   font-variant-numeric: tabular-nums;
+}
+
+/* A quadrant on a phone is the narrowest column in the app — a third of a
+   screen wide. The card title steps down there rather than breaking an
+   eight-word task across five lines. The container is the app wrapper in
+   ui/Layout.tsx, so this and PHONE_MAX are the same breakpoint. */
+@container app (max-width: 740px) {
+  .card > .t-card-title,
+  .card > .t-card-title-instant {
+    font-size: 11.5px;
+    line-height: 1.3;
+  }
 }
 
 /* Controls. Mono, uppercase and tracked means "structural label" in this
@@ -675,8 +696,14 @@
 
 .card {
   position: relative;
-  /* dnd-kit is pointer-event based; the browser must not claim the gesture. */
-  touch-action: none;
+  /*
+     manipulation, not none — what dnd-kit asks for when the touch sensor is
+     delay-activated, as it is here. The finger belongs to the quadrant until
+     the delay elapses, and only then does the drag claim it. With `none` the
+     cards cover the scroll area so completely that a full quadrant could not
+     be scrolled on a phone at all.
+  */
+  touch-action: manipulation;
   -webkit-user-select: none;
   user-select: none;
   transition:

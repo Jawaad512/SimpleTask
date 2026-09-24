@@ -24,6 +24,7 @@ interface TaskSheetProps {
   category?: CategoryRow
   categories: CategoryRow[]
   onClose: () => void
+  onSetTitle: (task: TaskRow, title: string) => void
   onSetEstimate: (task: TaskRow, minutes: number | null) => void
   onSetAxes: (task: TaskRow, axes: { isToday: boolean; isQuick: boolean }) => void
   onSetCategory: (task: TaskRow, categoryId: string) => void
@@ -43,6 +44,7 @@ export function TaskSheet({
   category,
   categories,
   onClose,
+  onSetTitle,
   onSetEstimate,
   onSetAxes,
   onSetCategory,
@@ -57,6 +59,7 @@ export function TaskSheet({
   const [deletingTag, setDeletingTag] = useState<TagRow | null>(null)
   const [managingTags, setManagingTags] = useState(false)
 
+  const [title, setTitle] = useState(task.title)
   const saved = effectiveMinutes(task)
   const [minutes, setMinutes] = useState(saved === null ? '' : String(saved))
   const [isToday, setIsToday] = useState(task.is_today)
@@ -69,10 +72,16 @@ export function TaskSheet({
   const instant = parsed !== null && isInstantFor(parsed)
   const nextQuick = parsed === null ? isQuick : isQuickFor(parsed)
 
+  const trimmedTitle = title.trim()
+  // A task with no name is not a task, so an empty field is a change the sheet
+  // refuses to save rather than one it quietly drops.
+  const named = trimmedTitle.length > 0
+  const titleChanged = named && trimmedTitle !== task.title
+
   const axesChanged = isPhone && (isToday !== task.is_today || nextQuick !== task.is_quick)
   const estimateChanged = parsed !== saved
   const categoryChanged = categoryId !== task.category_id
-  const dirty = estimateChanged || axesChanged || categoryChanged
+  const dirty = titleChanged || estimateChanged || axesChanged || categoryChanged
   const chosenCategory =
     categories.find((row) => row.id === categoryId) ??
     (categoryId === category?.id ? category : undefined)
@@ -91,6 +100,8 @@ export function TaskSheet({
   }
 
   function save() {
+    if (!named) return
+    if (titleChanged) onSetTitle(task, trimmedTitle)
     // Estimate first, axes last: the axes move recomputes the position for the
     // quadrant the task actually ends up in, which the estimate may have changed.
     if (estimateChanged) onSetEstimate(task, parsed)
@@ -117,9 +128,32 @@ export function TaskSheet({
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <h3 className={instant ? 't-card-title-instant' : 't-row-title'} style={{ margin: 0 }}>
-            {task.title}
-          </h3>
+          {/* The name is the first thing you came here to change, so it is a
+              field, not a heading — bare until you touch it. */}
+          <input
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault()
+                if (dirty) save()
+              }
+              if (event.key === 'Escape') {
+                // Put the name back rather than closing the sheet over a
+                // half-typed one.
+                event.stopPropagation()
+                setTitle(task.title)
+              }
+            }}
+            aria-label="Task name"
+            placeholder="Task name"
+            maxLength={200}
+            className={`${instant ? 't-card-title-instant' : 't-row-title'} field-bare`}
+            // The negative margin and the matching width keep the text on the
+            // same left edge as the category row below it: a field, but not an
+            // indent.
+            style={{ width: 'calc(100% + 14px)', padding: '5px 7px', margin: '-5px -7px 0' }}
+          />
           <label
             style={{
               display: 'flex',
@@ -344,11 +378,11 @@ export function TaskSheet({
           <button
             type="button"
             className="t-control btn btn-primary"
-            disabled={!dirty}
-            style={{ padding: '9px 12px', opacity: dirty ? 1 : 0.35 }}
+            disabled={!dirty || !named}
+            style={{ padding: '9px 12px', opacity: dirty && named ? 1 : 0.35 }}
             onClick={save}
           >
-            {dirty ? 'Save changes' : 'No changes to save'}
+            {!named ? 'Name the task to save' : dirty ? 'Save changes' : 'No changes to save'}
           </button>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

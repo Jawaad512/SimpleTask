@@ -6,8 +6,7 @@
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="description" content="Triage tasks on a 2×2 grid of effort and today." />
-    <meta name="theme-color" content="#FAF9F6" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#121211" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#FAF9F6" />
     <title>SimpleTask</title>
 
     <!--
@@ -137,28 +136,30 @@
         }
       }
 
-      @media (prefers-color-scheme: dark) {
-        #splash {
-          background: #121211;
-        }
-        #splash .glyph i {
-          background: #77756e;
-        }
-        #splash .glyph i:nth-child(1) {
-          background: #edede8;
-        }
-        #splash .name span:first-child {
-          color: #26a29c;
-        }
-        #splash .name span:last-child {
-          color: #d48c1c;
-        }
-        #splash .bar {
-          background: rgba(119, 117, 110, 0.25);
-        }
-        #splash .bar i {
-          background: #77756e;
-        }
+      /* Dark is an attribute rather than a media query here, for the same
+         reason it is one in index.css: the script below resolves the saved
+         choice before anything paints, so the splash is already the right
+         colour when it arrives. */
+      :root[data-theme="dark"] #splash {
+        background: #121211;
+      }
+      :root[data-theme="dark"] #splash .glyph i {
+        background: #77756e;
+      }
+      :root[data-theme="dark"] #splash .glyph i:nth-child(1) {
+        background: #edede8;
+      }
+      :root[data-theme="dark"] #splash .name span:first-child {
+        color: #26a29c;
+      }
+      :root[data-theme="dark"] #splash .name span:last-child {
+        color: #d48c1c;
+      }
+      :root[data-theme="dark"] #splash .bar {
+        background: rgba(119, 117, 110, 0.25);
+      }
+      :root[data-theme="dark"] #splash .bar i {
+        background: #77756e;
       }
 
       /* The bar still moves — an indeterminate wait with nothing moving reads
@@ -175,6 +176,28 @@
         }
       }
     </style>
+
+    <!--
+      Theme, decided before the first pixel. A saved choice wins; without one
+      the system decides. src/ui/Theme.tsx takes it from here and is the only
+      thing that ever writes this attribute again.
+    -->
+    <script>
+      (function () {
+        var choice = null
+        try {
+          choice = localStorage.getItem("simpletask.theme")
+        } catch (error) {
+          /* Private mode. Fall through to the system preference. */
+        }
+        if (choice !== "light" && choice !== "dark") {
+          choice = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+        }
+        document.documentElement.setAttribute("data-theme", choice)
+        var meta = document.querySelector("meta[name=\"theme-color\"]")
+        if (meta) meta.setAttribute("content", choice === "dark" ? "#121211" : "#FAF9F6")
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

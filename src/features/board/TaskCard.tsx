@@ -5,6 +5,7 @@ import { cn } from '../../lib/cn'
 import type { TaskRow } from '../../lib/database.types'
 import { effectiveMinutes, taskEstimate } from '../../lib/duration'
 import { slotColor } from '../../lib/palette'
+import { useLayout } from '../../ui/Layout'
 import { completionDelay } from '../../ui/motion'
 import { TickButton } from './TickButton'
 
@@ -69,6 +70,22 @@ export function TaskCardBody({ task, colorSlot, onComplete, onOpen, dragProps, l
 
   const estimate = taskEstimate(task)
   const minutes = effectiveMinutes(task)
+  const { isPhone } = useLayout()
+
+  /* Greyed and tabular: a fact about the task, never a second title. */
+  const figure = estimate && (
+    <span
+      className="t-meta"
+      title={
+        minutes && minutes >= 5 ? `Estimated ${minutes} minutes` : 'Estimated under five minutes'
+      }
+      style={{ flexShrink: 0, color: 'var(--muted)', lineHeight: 1.4 }}
+    >
+      {estimate}
+    </span>
+  )
+
+  const tick = <TickButton label={`Complete “${task.title}”`} checked={completing} onActivate={complete} />
 
   return (
     <div
@@ -98,7 +115,7 @@ export function TaskCardBody({ task, colorSlot, onComplete, onOpen, dragProps, l
         // no new colour enters the system.
         ['--cat' as string]: slotColor(colorSlot),
         display: 'flex',
-        alignItems: 'center',
+        alignItems: isPhone ? 'flex-start' : 'center',
         gap: 8,
         background: 'var(--surface)',
         border: `${task.habit_id ? '2px dotted' : '2px solid'} ${slotColor(colorSlot)}`,
@@ -114,19 +131,6 @@ export function TaskCardBody({ task, colorSlot, onComplete, onOpen, dragProps, l
       >
         {task.title}
       </span>
-
-      {/* Greyed and tabular: a fact about the task, never a second title. */}
-      {estimate && (
-        <span
-          className="t-meta"
-          title={
-            minutes && minutes >= 5 ? `Estimated ${minutes} minutes` : 'Estimated under five minutes'
-          }
-          style={{ flexShrink: 0, color: 'var(--muted)', lineHeight: 1.4 }}
-        >
-          {estimate}
-        </span>
-      )}
 
       {task.carry_over_count >= CARRY_OVER_THRESHOLD && (
         <span
@@ -145,7 +149,28 @@ export function TaskCardBody({ task, colorSlot, onComplete, onOpen, dragProps, l
         </span>
       )}
 
-      <TickButton label={`Complete “${task.title}”`} checked={completing} onActivate={complete} />
+      {/* On a phone the estimate tucks in under the tick instead of taking a
+          column of its own: the width it gives back is the width the title
+          needed to stop wrapping every other word. */}
+      {isPhone ? (
+        <span
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 2,
+            flexShrink: 0,
+          }}
+        >
+          {tick}
+          {figure}
+        </span>
+      ) : (
+        <>
+          {figure}
+          {tick}
+        </>
+      )}
     </div>
   )
 }
