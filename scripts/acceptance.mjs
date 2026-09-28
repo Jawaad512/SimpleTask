@@ -451,6 +451,66 @@ check('a pad over the cap is rejected', Boolean(padTooLong.error))
 
 // ---------------------------------------------------------------------------
 
+phase('Deleted rows — a delete is archived, and the archive is not writable')
+
+const doomed = await owner
+  .from('deadlines')
+  .insert({ user_id: ownerId, title: 'about to be deleted', due_date: localDate(3) })
+  .select()
+  .single()
+check('a row to delete exists', !doomed.error, doomed.error?.message)
+
+const deletedAt = new Date().toISOString()
+await owner.from('deadlines').delete().eq('id', doomed.data.id)
+
+const archived = await owner
+  .from('deleted_rows')
+  .select('*')
+  .eq('table_name', 'deadlines')
+  .gte('deleted_at', deletedAt)
+
+const kept = archived.data?.find((row) => row.row_data?.id === doomed.data.id)
+check('the deleted row is in the archive', Boolean(kept), archived.error?.message)
+check('the archive keeps the whole row, not just its id', kept?.row_data?.title === 'about to be deleted')
+check('the archive attributes the row to its owner', kept?.user_id === ownerId)
+
+// The point of the whole table: the account that caused the delete cannot
+// remove the evidence of it. No delete policy exists, so this is a no-op.
+await owner.from('deleted_rows').delete().eq('id', kept?.id ?? 0)
+const stillThere = await owner.from('deleted_rows').select('id').eq('id', kept?.id ?? 0)
+check('the owner cannot delete from the archive', (stillThere.data?.length ?? 0) === 1)
+
+const forged = await owner
+  .from('deleted_rows')
+  .insert({ user_id: ownerId, table_name: 'tasks', row_data: {} })
+check('the owner cannot write to the archive by hand', Boolean(forged.error))
+
+const intruderArchive = await other.from('deleted_rows').select('id')
+check('another signed-in user reads no archive', (intruderArchive.data?.length ?? 0) === 0)
+
+const restoreCall = await owner.rpc('restore_deleted_rows', {
+  p_table: 'deadlines',
+  p_since: deletedAt,
+})
+const restoredRow = await owner
+  .from('deadlines')
+  .select('*')
+  .eq('id', doomed.data.id)
+  .maybeSingle()
+check(
+  'restore_deleted_rows puts the row back',
+  !restoreCall.error && restoredRow.data?.title === 'about to be deleted',
+  restoreCall.error?.message,
+)
+
+const refused = await owner.rpc('restore_deleted_rows', {
+  p_table: 'user_settings',
+  p_since: deletedAt,
+})
+check('restore refuses a table not on the list', Boolean(refused.error))
+
+// ---------------------------------------------------------------------------
+
 phase('Cleanup')
 
 for (const table of ['tasks', 'habits', 'tags', 'deadlines', 'categories']) {

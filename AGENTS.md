@@ -37,7 +37,32 @@ npm run lint
 npm run build
 npm run dev
 npm run test:leads writes two rows to the guest tables and removes them again
+npm run backup     read-only export of the whole account to backups/
 ```
+
+## Data protection
+
+Two layers, added after the 2026-09-28 incident.
+
+**`deleted_rows`** — every delete on `tasks`, `habits`, `tags`, `deadlines`,
+`categories` and `task_tags` copies the whole row into an archive table first,
+via a `security definer` trigger. The owner has `select` on it and nothing else:
+no insert, update or delete policy exists, so a script that empties every other
+table cannot touch the archive. Recover with:
+
+```sql
+select public.restore_deleted_rows('tasks', now() - interval '1 day');
+```
+
+There is no purge function on purpose — anything the client can call, a runaway
+script can call. Trim it from the dashboard SQL editor if it ever needs it.
+
+**`npm run backup`** — read-only export of all seven tables to a gitignored
+`backups/*.json`. This is the layer the archive cannot be: it survives losing
+the project itself. `npm run restore -- <file>` puts it back, refusing to merge
+into an account that already has rows unless given `--force`.
+
+Run a backup before anything that touches data in bulk. It takes a second.
 
 ## Migrations
 

@@ -35,3 +35,6 @@ credentials.txt
 
 # Local scratch
 Claude outputs/
+
+# Database exports — real task data, never committed
+backups/
