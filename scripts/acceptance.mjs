@@ -1,7 +1,27 @@
 // Acceptance checks for the phases in the build prompt that have a server-side
-// criterion. Run against the live project; it cleans up after itself.
+// criterion.
 //
-//   node scripts/acceptance.mjs
+// ===========================================================================
+//  THIS SCRIPT PERMANENTLY DELETES EVERY ROW THE OWNER ACCOUNT HAS.
+//
+//  Not a dry run, not a sandbox, not a transaction that rolls back. It empties
+//  tasks, habits, tags, deadlines, categories and user_settings against the
+//  LIVE project, at the start of the run and again at the end, because the
+//  assertions below need an account with known contents.
+//
+//  On 2026-09-28 this destroyed a real board. The reader had seen the name
+//  "test" and assumed it was safe. See docs/incidents/ for the write-up. The
+//  refusal below is the fix: the script now counts the owner's rows first and
+//  will not run if it finds any.
+//
+//    npm run test:acceptance                 checks, refuses if data exists
+//    npm run test:acceptance -- --force      deletes it anyway
+//
+//  `npm test` does NOT run this. It runs typecheck and lint, which touch
+//  nothing. That is deliberate — see the incident write-up.
+// ===========================================================================
+
+import { createInterface } from 'node:readline/promises'
 
 import { createClient } from '@supabase/supabase-js'
 import { readFileSync } from 'node:fs'
@@ -76,6 +96,60 @@ const signIn = await owner.auth.signInWithPassword({
 })
 check('owner signs in with email and password', !signIn.error, signIn.error?.message)
 const ownerId = signIn.data.user?.id
+
+// ---------------------------------------------------------------------------
+// The refusal. Everything below this point destroys data, so nothing below it
+// runs until we have looked at what is about to be destroyed and said so out
+// loud. Counting first is the whole point: a script that silently empties an
+// account it was pointed at by mistake is indistinguishable from a bug.
+// ---------------------------------------------------------------------------
+
+const DESTROYS = ['tasks', 'habits', 'tags', 'deadlines', 'categories', 'user_settings']
+
+const force = process.argv.includes('--force') || process.env.ACCEPTANCE_FORCE === '1'
+
+const counts = {}
+for (const table of DESTROYS) {
+  const column = table === 'user_settings' ? 'user_id' : 'id'
+  const { count } = await owner
+    .from(table)
+    .select(column, { count: 'exact', head: true })
+    .eq('user_id', ownerId)
+  counts[table] = count ?? 0
+}
+
+const occupied = Object.entries(counts).filter(([, n]) => n > 0)
+
+if (occupied.length > 0 && !force) {
+  console.log(`
+  STOP — this account is not empty.
+`)
+  for (const [table, n] of occupied) console.log(`        ${String(n).padStart(5)}  ${table}`)
+  console.log(`
+  This script deletes all of the above, permanently, and there is no undo.
+  It is meant for a throwaway account, not one holding real tasks.
+
+  If this is your real board: do not run this. Back it up first.
+  If you are certain you want it gone: npm run test:acceptance -- --force
+`)
+  process.exit(1)
+}
+
+if (force && occupied.length > 0) {
+  const total = occupied.reduce((sum, [, n]) => sum + n, 0)
+  console.log(`
+  --force given. About to permanently delete ${total} row(s).
+`)
+  if (process.stdin.isTTY) {
+    const rl = createInterface({ input: process.stdin, output: process.stdout })
+    const answer = await rl.question('  Type DELETE to continue: ')
+    rl.close()
+    if (answer.trim() !== 'DELETE') {
+      console.log('  Aborted. Nothing was deleted.')
+      process.exit(1)
+    }
+  }
+}
 
 // Start from a clean slate for repeat runs.
 for (const table of ['task_tags', 'tasks', 'habits', 'tags', 'deadlines', 'categories']) {
