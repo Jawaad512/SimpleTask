@@ -76,6 +76,8 @@ export type DeadlineRow = {
 export type UserSettingsRow = {
   user_id: string
   last_rollover_on: string | null
+  /** The Future pane's scratch pad. Empty string, never null. */
+  future_notes: string
 }
 
 export type GuestInterestRow = {
@@ -148,7 +150,10 @@ export type Database = {
       tags: TableOf<TagRow, WithDefaults<TagRow, 'id' | 'created_at'>>
       task_tags: TableOf<TaskTagRow, TaskTagRow>
       deadlines: TableOf<DeadlineRow, WithDefaults<DeadlineRow, 'id' | 'created_at'>>
-      user_settings: TableOf<UserSettingsRow, UserSettingsRow>
+      user_settings: TableOf<
+        UserSettingsRow,
+        WithDefaults<UserSettingsRow, 'last_rollover_on' | 'future_notes'>
+      >
       guest_interest: TableOf<GuestInterestRow, WithDefaults<GuestInterestRow, 'id' | 'created_at'>>
       guest_feedback: TableOf<
         GuestFeedbackRow,

@@ -22,6 +22,8 @@ export type GuestSnapshot = {
   taskTags: TaskTagRow[]
   deadlines: DeadlineRow[]
   habits: HabitRow[]
+  /** The Future pane's pad. A guest's copy of what the owner keeps on the row. */
+  futureNotes: string
 }
 
 let memory: GuestSnapshot | null = null
@@ -42,6 +44,7 @@ function persist(snapshot: GuestSnapshot) {
 function normalise(parsed: GuestSnapshot): GuestSnapshot {
   return {
     ...parsed,
+    futureNotes: typeof parsed.futureNotes === 'string' ? parsed.futureNotes : '',
     tasks: parsed.tasks.map((row) => ({
       ...row,
       estimated_minutes: row.estimated_minutes ?? null,
@@ -103,6 +106,7 @@ function seed(): GuestSnapshot {
   const tDone = 'd1000000-0000-4000-8000-000000000007'
 
   const snapshot: GuestSnapshot = {
+    futureNotes: '',
     categories: [
       { id: work, user_id: GUEST_USER_ID, name: 'Work', color_slot: 5, position: 0, created_at: now },
       { id: home, user_id: GUEST_USER_ID, name: 'Home', color_slot: 3, position: 1, created_at: now },
@@ -356,6 +360,14 @@ export function guestUpdateDeadline(id: string, patch: Partial<DeadlineRow>) {
 
 export function guestDeleteDeadline(id: string) {
   update((s) => ({ ...s, deadlines: s.deadlines.filter((row) => row.id !== id) }))
+}
+
+export function guestFutureNotes(): string {
+  return guestSnapshot().futureNotes
+}
+
+export function guestSetFutureNotes(text: string) {
+  update((s) => ({ ...s, futureNotes: text }))
 }
 
 export function guestToggleTaskTag(taskId: string, tagId: string, on: boolean) {

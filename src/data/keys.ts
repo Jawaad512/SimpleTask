@@ -6,6 +6,7 @@ export const qk = {
   deadlines: ['deadlines'] as const,
   habits: ['habits'] as const,
   settings: ['user_settings'] as const,
+  futureNotes: ['future_notes'] as const,
   interest: ['guest_interest'] as const,
   feedback: ['guest_feedback'] as const,
 }

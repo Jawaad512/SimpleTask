@@ -339,6 +339,44 @@ check(
 
 // ---------------------------------------------------------------------------
 
+phase('Future notes — the pad is on the row, not in the browser')
+
+const padRead = await owner.from('user_settings').select('future_notes').maybeSingle()
+check(
+  'future_notes exists and defaults to an empty pad',
+  !padRead.error && (padRead.data?.future_notes ?? '') === '',
+  padRead.error?.message ?? JSON.stringify(padRead.data),
+)
+
+// Upsert rather than update: this is the call the client makes, and on a fresh
+// account there may be no settings row for it to update.
+const padWrite = await owner
+  .from('user_settings')
+  .upsert({ user_id: ownerId, future_notes: 'Renew passport' }, { onConflict: 'user_id' })
+check('the owner can write the pad', !padWrite.error, padWrite.error?.message)
+
+const padBack = await owner.from('user_settings').select('*').maybeSingle()
+check(
+  'the pad reads back as written',
+  padBack.data?.future_notes === 'Renew passport',
+  padBack.error?.message,
+)
+check(
+  'writing the pad leaves last_rollover_on alone',
+  padBack.data?.last_rollover_on === localDate(),
+  String(padBack.data?.last_rollover_on),
+)
+
+const padIntruder = await other.from('user_settings').select('future_notes')
+check('another signed-in user reads no pad', (padIntruder.data?.length ?? 0) === 0)
+
+const padTooLong = await owner
+  .from('user_settings')
+  .upsert({ user_id: ownerId, future_notes: 'x'.repeat(20_001) }, { onConflict: 'user_id' })
+check('a pad over the cap is rejected', Boolean(padTooLong.error))
+
+// ---------------------------------------------------------------------------
+
 phase('Cleanup')
 
 for (const table of ['tasks', 'habits', 'tags', 'deadlines', 'categories']) {

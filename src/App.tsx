@@ -22,6 +22,7 @@ import { FuturePane } from './features/future/FuturePane'
 import { HabitsPane } from './features/habits/HabitsPane'
 import { InfoPage } from './features/info/InfoPage'
 import { LeadsPanel } from './features/leads/LeadsPanel'
+import { TimerPane } from './features/timer/TimerPane'
 import { ListView } from './features/list/ListView'
 import { TaskSheet } from './features/sheet/TaskSheet'
 import { MoonIcon, SignOutIcon, SunIcon } from './ui/Icons'
@@ -39,7 +40,7 @@ function quickAddAxes(minutes: number | null) {
   return { isToday: true, isQuick: minutes === null ? true : isQuickFor(minutes) }
 }
 
-type Section = 'grid' | 'list' | 'done' | 'deadlines' | 'habits' | 'future' | 'info'
+type Section = 'grid' | 'list' | 'done' | 'deadlines' | 'habits' | 'timer' | 'future' | 'info'
 
 const MAIN_TABS: Array<{ id: Section; label: string }> = [
   { id: 'grid', label: 'Grid' },
@@ -50,6 +51,7 @@ const MAIN_TABS: Array<{ id: Section; label: string }> = [
 const RAIL_TABS: Array<{ id: Section; label: string }> = [
   { id: 'deadlines', label: 'Deadlines' },
   { id: 'habits', label: 'Habits' },
+  { id: 'timer', label: 'Timer' },
   { id: 'future', label: 'Future' },
 ]
 
@@ -96,10 +98,9 @@ function AppShell() {
   const [openTaskId, setOpenTaskId] = useState<string | null>(null)
   const [leadsOpen, setLeadsOpen] = useState(false)
 
-  // The rail is always visible on desktop, so its two sections are never the
+  // The rail is always visible on desktop, so its own sections are never the
   // main column's current view.
-  const railSection =
-    chosenSection === 'deadlines' || chosenSection === 'habits' || chosenSection === 'future'
+  const railSection = RAIL_TABS.some((tab) => tab.id === chosenSection)
   const section: Section = !isPhone && railSection ? 'grid' : chosenSection
 
   const activeTasks = useMemo(() => tasks.filter((task) => task.status === 'active'), [tasks])
@@ -330,6 +331,8 @@ function AppShell() {
         onSpawn={handleSpawnHabit}
         onClear={(habitId) => removeHabitInstances.mutate({ habitId })}
       />
+    ) : section === 'timer' ? (
+      <TimerPane />
     ) : section === 'future' ? (
       <FuturePane />
     ) : section === 'info' ? (
@@ -358,14 +361,15 @@ function AppShell() {
         onSpawn={handleSpawnHabit}
         onClear={(habitId) => removeHabitInstances.mutate({ habitId })}
       />
+      <TimerPane />
       <FuturePane />
     </aside>
   ) : null
 
   return (
     <div style={{ minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* Two rows rather than one: at phone widths five tabs plus the wordmark
-          cannot share a line without wrapping into a column. */}
+      {/* Two rows rather than one: at phone widths the section tabs plus the
+          wordmark cannot share a line without wrapping into a column. */}
       <header
         style={{
           display: 'flex',
